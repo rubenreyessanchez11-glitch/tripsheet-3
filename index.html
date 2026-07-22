@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowCheck Pro — Control de Flujo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Librerías de Gráficos y PDF -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  
+  <!-- SDK de PayPal (Reemplaza YOUR_PAYPAL_CLIENT_ID con tu Client ID real) -->
+  <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
+
+  <style>
+    :root {
+      --bg-main: #0a0c10;
+      --bg-card: #141721;
+      --border-color: #232736;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent-purple: #8b5cf6;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --text-title: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-title);
+    }
+    .navbar {
+      min-height: 60px;
+      padding: 10px 24px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .brand i {
+      color: var(--primary);
+    }
+    .header-data {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 0.84rem;
+    }
+    .header-data strong {
+      color: #fff;
+    }
+    .user-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .app-body {
+      display: grid;
+      grid-template-columns: 330px minmax(520px, 1fr) 300px;
+      gap: 1px;
+      min-height: calc(100vh - 60px);
+      background: var(--border-color);
+    }
+    .panel {
+      background: var(--bg-main);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 9px;
+      padding: 14px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      font-size: 0.79rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .input-ctrl {
+      width: 100%;
+      padding: 9px 11px;
+      color: #fff;
+      background: #0d0f14;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      outline: none;
+      font-size: 0.9rem;
+    }
+    .input-ctrl:focus {
+      border-color: var(--primary);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .btn {
+      width: 100%;
+      padding: 11px 12px;
+      color: #fff;
+      background: var(--primary);
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn:hover {
+      background: var(--primary-hover);
+    }
+    .btn-secondary {
+      background: #293041;
+    }
+    .btn-secondary:hover {
+      background: #353e53;
+    }
+    .btn-danger {
+      background: var(--danger);
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    .btn-success {
+      background: var(--success);
+    }
+    .btn-success:hover {
+      background: #059669;
+    }
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .timer {
+      padding: 16px 10px;
+      margin-bottom: 12px;
+      background: #0d0f14;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+    .timer.running {
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .timer.finished {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+    .chart-card {
+      height: 410px;
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 340px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    th {
+      padding: 9px 8px;
+      color: var(--text-muted);
+      background: #0d0f14;
+      border-bottom: 1px solid var(--border-color);
+      text-align: center;
+      white-space: nowrap;
+    }
+    td {
+      padding: 8px;
+      border-bottom: 1px solid var(--border-color);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .table-input {
+      width: 96px;
+      padding: 6px 7px;
+      color: #fff;
+      background: #0d0f14;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      text-align: center;
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .table-input:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+    .table-input.invalid {
+      border-color: var(--danger);
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .delete-row {
+      width: 32px;
+      height: 28px;
+      color: #fff;
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .delete-row:hover {
+      background: var(--danger);
+    }
+    .editable-note {
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+    .empty-row {
+      padding: 24px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .summary-value {
+      margin-top: 4px;
+      font-size: 1.45rem;
+      font-weight: 800;
+    }
+    .summary-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    .summary-block {
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .summary-block:last-child {
+      border-bottom: 0;
+    }
+    .status-box {
+      padding: 12px;
+      border-radius: 7px;
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 4px solid var(--primary);
+      font-size: 0.83rem;
+      line-height: 1.45;
+    }
+    .formula {
+      padding: 10px;
+      margin-top: 10px;
+      color: var(--text-muted);
+      background: #0d0f14;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+    .note {
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+    .report-status {
+      margin-top: 10px;
+      min-height: 20px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+    .report-status.ready {
+      color: var(--success);
+    }
+    .report-status.stale {
+      color: var(--warning);
+    }
+    .btn:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+    }
+    .btn:disabled:hover {
+      background: inherit;
+    }
+
+    #paypal-button-container {
+      margin-top: 10px;
+    }
+
+    @media (max-width: 1180px) {
+      .app-body {
+        grid-template-columns: 320px 1fr;
+      }
+      .right-panel {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 820px) {
+      .app-body {
+        grid-template-columns: 1fr;
+      }
+      .right-panel {
+        grid-column: auto;
+        display: flex;
+      }
+      .chart-card {
+        height: 360px;
+      }
+      .chart-wrapper {
+        height: 290px;
+      }
+    }
+    @media (max-width: 520px) {
+      .grid-2,
+      .button-grid {
+        grid-template-columns: 1fr;
+      }
+      .navbar {
+        padding: 10px 14px;
+      }
+      .panel {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand">
+      <i class="fa-solid fa-water"></i>
+      FlowCheck Pro
+    </div>
+    <div class="header-data">
+      <span>POZO: <strong id="wellNameDisplay">--</strong></span>
+      <span>RIG: <strong id="rigNameDisplay">--</strong></span>
+      <span>DURACIÓN: <strong id="durationDisplay">15 MIN</strong></span>
+    </div>
+    <div class="user-status">
+      <span id="userEmail" style="color: var(--text-muted); font-size: 0.8rem;">Sin sesión</span>
+      <button id="authBtn" class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem;" onclick="toggleAuth()">
+        <i class="fa-solid fa-user"></i> Login
+      </button>
+    </div>
+  </header>
+  <main class="app-body">
+    <section class="panel">
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-cloud"></i> Sincronización Firebase</span>
+        </div>
+        <div class="button-grid">
+          <button class="btn btn-secondary" onclick="saveToFirebase()">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Guardar
+          </button>
+          <button class="btn btn-secondary" onclick="loadFromFirebase()">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Cargar
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-industry"></i> Datos generales</span>
+        </div>
+        <div class="form-group">
+          <label>Nombre del pozo</label>
+          <input type="text" id="wellName" class="input-ctrl" placeholder="Ej. EXP-L-23" autocomplete="off" oninput="updateHeader()">
+        </div>
+        <div class="form-group">
+          <label>Nombre del rig</label>
+          <input type="text" id="rigName" class="input-ctrl" placeholder="Ej. Menadrill 1" autocomplete="off" oninput="updateHeader()">
+        </div>
+        <div class="form-group">
+          <label>Nombre del supervisor</label>
+          <input type="text" id="supervisorName" class="input-ctrl" placeholder="Nombre completo" autocomplete="off" oninput="invalidateGeneratedPdf()">
+        </div>
+        <div class="form-group">
+          <label>Categoría del supervisor</label>
+          <input type="text" id="supervisorCategory" class="input-ctrl" list="supervisorCategories" placeholder="Ej. Senior Drilling Supervisor" autocomplete="off" oninput="invalidateGeneratedPdf()">
+          <datalist id="supervisorCategories">
+            <option value="Senior Drilling Supervisor">
+            <option value="Drilling Supervisor">
+            <option value="Night Drilling Supervisor">
+            <option value="Wellsite Supervisor">
+            <option value="Company Man">
+          </datalist>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Profundidad (m)</label>
+            <input type="number" id="depth" class="input-ctrl" value="0" step="0.01" oninput="invalidateGeneratedPdf()">
+          </div>
+          <div class="form-group">
+            <label>Duración del flow check</label>
+            <select id="flowDuration" class="input-ctrl" onchange="changeDuration()">
+              <option value="15" selected>15 minutos</option>
+              <option value="30">30 minutos</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Observación / operación previa</label>
+          <input type="text" id="operationNote" class="input-ctrl" placeholder="Ej. Después de circular, antes de sacar tubería" oninput="updateChartTitle(); invalidateGeneratedPdf()">
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-stopwatch"></i> Cronómetro</span>
+        </div>
+        <div id="timerDisplay" class="timer">15:00</div>
+        <div class="button-grid">
+          <button class="btn btn-success" onclick="startTimer()">
+            <i class="fa-solid fa-play"></i> Iniciar
+          </button>
+          <button class="btn btn-secondary" onclick="pauseTimer()">
+            <i class="fa-solid fa-pause"></i> Pausar
+          </button>
+        </div>
+        <button class="btn btn-danger" style="margin-top: 8px;" onclick="resetTimer()">
+          <i class="fa-solid fa-rotate-left"></i> Reiniciar
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-plus"></i> Registrar intervalo</span>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Vol. inicial (bbl)</label>
+            <input type="number" id="initialVolume" class="input-ctrl" step="0.01" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Vol. final (bbl)</label>
+            <input type="number" id="finalVolume" class="input-ctrl" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tiempo del intervalo (min)</label>
+          <input type="number" id="intervalTime" class="input-ctrl" value="1.00" min="0.01" step="0.01">
+        </div>
+        <button class="btn" onclick="addRecord()">
+          <i class="fa-solid fa-floppy-disk"></i> Agregar lectura
+        </button>
+        <p class="note" style="margin-top: 10px;">
+          Después de guardar una lectura, el volumen final se transfiere automáticamente como volumen inicial del siguiente intervalo.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card chart-card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-chart-line"></i> Volumen y derivada</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="flowChart"></canvas>
+        </div>
+      </div>
+      <div class="card" style="flex: 1;">
+        <div class="card-header">
+          <span><i class="fa-solid fa-table"></i> Registro de volúmenes</span>
+          <span>
+            <span class="editable-note"><i class="fa-solid fa-pen"></i> Campos editables</span>
+            &nbsp;|&nbsp;
+            <span id="recordCount">0 lecturas</span>
+          </span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Vol. Inicial (bbl)</th>
+                <th>Vol. Final (bbl)</th>
+                <th>Tiempo (min)</th>
+                <th>Delta Vol. (bbl)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="6" class="empty-row">Aún no hay lecturas registradas.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel right-panel">
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-calculator"></i> Resumen</span>
+        </div>
+        <div class="summary-block">
+          <div class="summary-label">Tiempo acumulado</div>
+          <div id="totalTimeDisplay" class="summary-value">0.00 min</div>
+        </div>
+        <div class="summary-block">
+          <div class="summary-label">Cambio total de volumen</div>
+          <div id="totalDeltaDisplay" class="summary-value">0.00 bbl</div>
+        </div>
+        <div class="summary-block">
+          <div class="summary-label">Derivada promedio</div>
+          <div id="averageRateDisplay" class="summary-value">0.000 bbl/min</div>
+        </div>
+        <div class="summary-block">
+          <div class="summary-label">Última derivada</div>
+          <div id="lastRateDisplay" class="summary-value">0.000 bbl/min</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-wave-square"></i> Interpretación</span>
+        </div>
+        <div id="statusBox" class="status-box">
+          Registre al menos un intervalo para calcular la tendencia del volumen.
+        </div>
+        <div class="formula">
+          <strong>Delta volumen:</strong><br>
+          ΔV = Volumen final − Volumen inicial<br><br>
+          <strong>Derivada o gasto observado:</strong><br>
+          dV/dt = ΔV ÷ Δt
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-file-pdf"></i> Reporte e impresión</span>
+        </div>
+        <button class="btn" onclick="generatePdfReport()">
+          <i class="fa-solid fa-file-arrow-down"></i> Generar reporte PDF
+        </button>
+        <button id="printPdfButton" class="btn btn-secondary" style="margin-top: 8px;" onclick="printGeneratedPdf()" disabled>
+          <i class="fa-solid fa-print"></i> Imprimir PDF generado
+        </button>
+        <div id="reportStatus" class="report-status">
+          Primero genere el reporte PDF. Después podrá imprimirlo.
+        </div>
+      </div>
+
+      <!-- Sección de PayPal integrada -->
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-credit-card fa-solid"></i> Licencia / Pago PayPal</span>
+        </div>
+        <p class="note" style="margin-bottom: 8px;">Adquiere acceso Premium o desbloquea funciones avanzadas:</p>
+        <div id="paypal-button-container"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span><i class="fa-solid fa-broom"></i> Control del registro</span>
+        </div>
+        <button id="clearRecordsButton" type="button" class="btn btn-danger" onclick="clearAllRecords()">
+          <i class="fa-solid fa-trash"></i> Borrar todas las lecturas
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Módulos de Firebase (v10 JS Modular) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Reemplaza con tus credenciales de Firebase Console
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROYECTO.firebaseapp.com",
+      projectId: "TU_PROYECTO_ID",
+      storageBucket: "TU_PROYECTO.appspot.com",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      const userEmailEl = document.getElementById('userEmail');
+      const authBtnEl = document.getElementById('authBtn');
+      if (user) {
+        userEmailEl.textContent = user.email;
+        authBtnEl.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Salir';
+      } else {
+        userEmailEl.textContent = 'Sin sesión';
+        authBtnEl.innerHTML = '<i class="fa-solid fa-user"></i> Login';
+      }
+    });
+
+    window.toggleAuth = async () => {
+      if (currentUser) {
+        await signOut(auth);
+        alert('Sesión cerrada correctamente.');
+      } else {
+        try {
+          await signInWithPopup(auth, provider);
+          alert('¡Sesión iniciada con éxito!');
+        } catch (error) {
+          console.error(error);
+          alert('Error al iniciar sesión: ' + error.message);
+        }
+      }
+    };
+
+    window.saveToFirebase = async () => {
+      if (!currentUser) {
+        alert('Por favor inicia sesión para guardar en la nube.');
+        return;
+      }
+      const wellName = document.getElementById('wellName').value.trim() || 'Desconocido';
+      try {
+        await setDoc(doc(db, "flowchecks", `${currentUser.uid}_${wellName}`), {
+          wellName,
+          rigName: document.getElementById('rigName').value.trim(),
+          supervisorName: document.getElementById('supervisorName').value.trim(),
+          supervisorCategory: document.getElementById('supervisorCategory').value.trim(),
+          depth: document.getElementById('depth').value,
+          duration: document.getElementById('flowDuration').value,
+          operationNote: document.getElementById('operationNote').value.trim(),
+          records: window.records,
+          updatedAt: new Date().toISOString()
+        });
+        alert('Datos guardados exitosamente en Firestore.');
+      } catch (e) {
+        console.error("Error guardando documento: ", e);
+        alert('Error al guardar en Firebase: ' + e.message);
+      }
+    };
+
+    window.loadFromFirebase = async () => {
+      if (!currentUser) {
+        alert('Por favor inicia sesión para cargar datos.');
+        return;
+      }
+      const wellName = document.getElementById('wellName').value.trim() || 'Desconocido';
+      try {
+        const docRef = doc(db, "flowchecks", `${currentUser.uid}_${wellName}`);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          document.getElementById('wellName').value = data.wellName || '';
+          document.getElementById('rigName').value = data.rigName || '';
+          document.getElementById('supervisorName').value = data.supervisorName || '';
+          document.getElementById('supervisorCategory').value = data.supervisorCategory || '';
+          document.getElementById('depth').value = data.depth || '0';
+          document.getElementById('flowDuration').value = data.duration || '15';
+          document.getElementById('operationNote').value = data.operationNote || '';
+          
+          window.records = data.records || [];
+          window.updateInterface();
+          window.updateHeader();
+          alert('Datos cargados correctamente desde Firestore.');
+        } else {
+          alert('No se encontraron registros en la nube para este pozo.');
+        }
+      } catch (e) {
+        console.error("Error leyendo documento: ", e);
+        alert('Error al cargar de Firebase: ' + e.message);
+      }
+    };
+  </script>
+
+  <script>
+    let records = [];
+    window.records = records;
+    let flowChart = null;
+    let timerInterval = null;
+    let remainingSeconds = 15 * 60;
+    let timerRunning = false;
+    let generatedPdfBlob = null;
+    let generatedPdfUrl = null;
+    let generatedPdfFileName = "";
+
+    function updateHeader() {
+      const wellName = document.getElementById('wellName').value.trim();
+      const rigName = document.getElementById('rigName').value.trim();
+      document.getElementById('wellNameDisplay').textContent = wellName || '--';
+      document.getElementById('rigNameDisplay').textContent = rigName || '--';
+      updateChartTitle();
+      invalidateGeneratedPdf();
+    }
+
+    function changeDuration() {
+      const duration = Number(document.getElementById('flowDuration').value);
+      document.getElementById('durationDisplay').textContent = `${duration} MIN`;
+      if (!timerRunning) {
+        remainingSeconds = duration * 60;
+        updateTimerDisplay();
+      }
+      invalidateGeneratedPdf();
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      const timer = document.getElementById('timerDisplay');
+      timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function startTimer() {
+      if (timerRunning || remainingSeconds <= 0) return;
+      timerRunning = true;
+      const timer = document.getElementById('timerDisplay');
+      timer.classList.remove('finished');
+      timer.classList.add('running');
+      timerInterval = setInterval(() => {
+        remainingSeconds -= 1;
+        updateTimerDisplay();
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          timerRunning = false;
+          remainingSeconds = 0;
+          timer.classList.remove('running');
+          timer.classList.add('finished');
+          alert('Flow check finalizado.');
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      if (!timerRunning) return;
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerRunning = false;
+      document.getElementById('timerDisplay').classList.remove('running');
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      const duration = Number(document.getElementById('flowDuration').value);
+      remainingSeconds = duration * 60;
+      const timer = document.getElementById('timerDisplay');
+      timer.classList.remove('finished', 'running');
+      updateTimerDisplay();
+    }
+
+    function addRecord() {
+      const initialVolume = Number(document.getElementById('initialVolume').value);
+      const finalVolume = Number(document.getElementById('finalVolume').value);
+      const intervalTime = Number(document.getElementById('intervalTime').value);
+      if (!Number.isFinite(initialVolume) || !Number.isFinite(finalVolume)) {
+        alert('Capture el volumen inicial y el volumen final.');
+        return;
+      }
+      if (!Number.isFinite(intervalTime) || intervalTime <= 0) {
+        alert('El tiempo del intervalo debe ser mayor que cero.');
+        return;
+      }
+      const deltaVolume = finalVolume - initialVolume;
+      const rate = deltaVolume / intervalTime;
+      records.push({
+        initialVolume,
+        finalVolume,
+        intervalTime,
+        deltaVolume,
+        rate
+      });
+      document.getElementById('initialVolume').value = finalVolume.toFixed(2);
+      document.getElementById('finalVolume').value = '';
+      updateInterface();
+      invalidateGeneratedPdf();
+    }
+
+    function editRecord(index, field, rawValue, inputElement) {
+      const record = records[index];
+      if (!record) return;
+      
+      const numericValue = Number(rawValue);
+      const isTimeField = field === 'intervalTime';
+      const isValid = Number.isFinite(numericValue) && (!isTimeField || numericValue > 0);
+      
+      if (!isValid) {
+        inputElement.classList.add('invalid');
+        alert(isTimeField ? 'El tiempo debe ser un número mayor que cero.' : 'Capture un volumen numérico válido.');
+        inputElement.value = record[field].toFixed(2);
+        inputElement.classList.remove('invalid');
+        return;
+      }
+      record[field] = numericValue;
+      record.deltaVolume = record.finalVolume - record.initialVolume;
+      record.rate = record.deltaVolume / record.intervalTime;
+
+      if (field === 'finalVolume' && index < records.length - 1) {
+        const nextRecord = records[index + 1];
+        nextRecord.initialVolume = numericValue;
+        nextRecord.deltaVolume = nextRecord.finalVolume - nextRecord.initialVolume;
+        nextRecord.rate = nextRecord.deltaVolume / nextRecord.intervalTime;
+      }
+
+      if (index === records.length - 1) {
+        document.getElementById('initialVolume').value = record.finalVolume.toFixed(2);
+      }
+      updateInterface();
+      invalidateGeneratedPdf();
+    }
+
+    function deleteRecord(index) {
+      records.splice(index, 1);
+      if (records.length > 0) {
+        document.getElementById('initialVolume').value = records[records.length - 1].finalVolume.toFixed(2);
+      } else {
+        document.getElementById('initialVolume').value = '';
+      }
+      updateInterface();
+      invalidateGeneratedPdf();
+    }
+
+    function clearAllRecords() {
+      records.splice(0, records.length);
+      document.getElementById('initialVolume').value = '';
+      document.getElementById('finalVolume').value = '';
+      document.getElementById('intervalTime').value = '1.00';
+      updateInterface();
+      invalidateGeneratedPdf();
+      const status = document.getElementById('statusBox');
+      status.style.borderLeftColor = 'var(--primary)';
+      status.style.background = 'rgba(59, 130, 246, 0.1)';
+      status.innerHTML = 'Todas las lecturas fueron eliminadas. Puede iniciar un nuevo registro.';
+    }
+
+    function updateInterface() {
+      renderTable();
+      updateSummary();
+      updateChart();
+    }
+    window.updateInterface = updateInterface;
+
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      const recordCount = document.getElementById('recordCount');
+      recordCount.textContent = `${records.length} ${records.length === 1 ? 'lectura' : 'lecturas'}`;
+      
+      if (records.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-row">Aún no hay lecturas registradas.</td>
+          </tr>
+        `;
+        return;
+      }
+      tbody.innerHTML = records.map((record, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>
+            <input type="number" class="table-input" step="0.01" value="${record.initialVolume.toFixed(2)}" onchange="editRecord(${index}, 'initialVolume', this.value, this)">
+          </td>
+          <td>
+            <input type="number" class="table-input" step="0.01" value="${record.finalVolume.toFixed(2)}" onchange="editRecord(${index}, 'finalVolume', this.value, this)">
+          </td>
+          <td>
+            <input type="number" class="table-input" min="0.01" step="0.01" value="${record.intervalTime.toFixed(2)}" onchange="editRecord(${index}, 'intervalTime', this.value, this)">
+          </td>
+          <td style="color: ${record.deltaVolume > 0 ? 'var(--warning)' : record.deltaVolume < 0 ? 'var(--danger)' : 'var(--success)'};">
+            ${record.deltaVolume >= 0 ? '+' : ''}${record.deltaVolume.toFixed(2)}
+          </td>
+          <td>
+            <button type="button" class="delete-row" title="Eliminar lectura" onclick="deleteRecord(${index})">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateSummary() {
+      const totalTime = records.reduce((sum, record) => sum + record.intervalTime, 0);
+      const totalDelta = records.reduce((sum, record) => sum + record.deltaVolume, 0);
+      const averageRate = totalTime > 0 ? totalDelta / totalTime : 0;
+      const lastRate = records.length > 0 ? records[records.length - 1].rate : 0;
+
+      document.getElementById('totalTimeDisplay').textContent = `${totalTime.toFixed(2)} min`;
+      document.getElementById('totalDeltaDisplay').textContent = `${totalDelta >= 0 ? '+' : ''}${totalDelta.toFixed(2)} bbl`;
+      document.getElementById('averageRateDisplay').textContent = `${averageRate >= 0 ? '+' : ''}${averageRate.toFixed(3)} bbl/min`;
+      document.getElementById('lastRateDisplay').textContent = `${lastRate >= 0 ? '+' : ''}${lastRate.toFixed(3)} bbl/min`;
+      updateStatus(averageRate, lastRate);
+    }
+
+    function updateStatus(averageRate, lastRate) {
+      const statusBox = document.getElementById('statusBox');
+      if (records.length === 0) {
+        statusBox.style.borderLeftColor = 'var(--primary)';
+        statusBox.style.background = 'rgba(59, 130, 246, 0.1)';
+        statusBox.innerHTML = 'Registre al menos un intervalo para calcular la tendencia del volumen.';
+        return;
+      }
+      const absRate = Math.abs(lastRate);
+      if (absRate < 0.01) {
+        statusBox.style.borderLeftColor = 'var(--success)';
+        statusBox.style.background = 'rgba(16, 185, 129, 0.10)';
+        statusBox.innerHTML = `<strong>Tendencia estable.</strong><br>La última variación es ${lastRate.toFixed(3)} bbl/min.`;
+      } else if (lastRate > 0) {
+        statusBox.style.borderLeftColor = 'var(--warning)';
+        statusBox.style.background = 'rgba(245, 158, 11, 0.10)';
+        statusBox.innerHTML = `<strong>Incremento de volumen.</strong><br>La última derivada es +${lastRate.toFixed(3)} bbl/min. Confirme visualmente el flujo.`;
+      } else {
+        statusBox.style.borderLeftColor = 'var(--danger)';
+        statusBox.style.background = 'rgba(239, 68, 68, 0.10)';
+        statusBox.innerHTML = `<strong>Disminución de volumen.</strong><br>La última derivada es ${lastRate.toFixed(3)} bbl/min. Revise pérdidas o transferencias.`;
+      }
+    }
+
+    function buildChartData() {
+      if (records.length === 0) {
+        return { labels: ['0.00'], volumes: [null], derivatives: [null] };
+      }
+      const labels = ['0.00'];
+      const volumes = [records[0].initialVolume];
+      const derivatives = [null];
+      let cumulativeTime = 0;
+      records.forEach(record => {
+        cumulativeTime += record.intervalTime;
+        labels.push(cumulativeTime.toFixed(2));
+        volumes.push(record.finalVolume);
+        derivatives.push(Number(record.rate.toFixed(4)));
+      });
+      return { labels, volumes, derivatives };
+    }
+
+    function getChartTitleLines() {
+      const wellName = document.getElementById('wellName').value.trim() || 'N/D';
+      const operationNote = document.getElementById('operationNote').value.trim();
+      const titleLines = [`FLOW CHECK — POZO: ${wellName}`];
+      if (operationNote) titleLines.push(operationNote);
+      return titleLines;
+    }
+
+    function updateChartTitle() {
+      if (!flowChart) return;
+      flowChart.options.plugins.title.text = getChartTitleLines();
+      flowChart.update();
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('flowChart').getContext('2d');
+      flowChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Volumen (bbl)',
+              data: [],
+              yAxisID: 'yVolume',
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.10)',
+              tension: 0.25,
+              fill: false,
+              pointRadius: 4
+            },
+            {
+              label: 'Derivada dV/dt (bbl/min)',
+              data: [],
+              yAxisID: 'yDerivative',
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.10)',
+              borderDash: [7, 5],
+              tension: 0.15,
+              fill: false,
+              pointRadius: 4,
+              spanGaps: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: '#232736' } },
+            yVolume: { position: 'left', ticks: { color: '#94a3b8' }, grid: { color: '#232736' } },
+            yDerivative: { position: 'right', ticks: { color: '#94a3b8' }, grid: { drawOnChartArea: false } }
+          },
+          plugins: {
+            title: { display: true, text: getChartTitleLines(), color: '#f8fafc' },
+            legend: { labels: { color: '#f8fafc' } }
+          }
+        }
+      });
+    }
+
+    function updateChart() {
+      if (!flowChart) return;
+      const chartData = buildChartData();
+      flowChart.data.labels = chartData.labels;
+      flowChart.data.datasets[0].data = chartData.volumes;
+      flowChart.data.datasets[1].data = chartData.derivatives;
+      flowChart.options.plugins.title.text = getChartTitleLines();
+      flowChart.update();
+    }
+
+    function invalidateGeneratedPdf() {
+      if (generatedPdfUrl) URL.revokeObjectURL(generatedPdfUrl);
+      generatedPdfBlob = null;
+      generatedPdfUrl = null;
+      document.getElementById('printPdfButton').disabled = true;
+      document.getElementById('reportStatus').textContent = 'Primero genere el reporte PDF. Después podrá imprimirlo.';
+      document.getElementById('reportStatus').className = 'report-status';
+    }
+
+    function generatePdfReport() {
+      if (records.length === 0) {
+        alert('Registre al menos una lectura antes de generar el PDF.');
+        return;
+      }
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const wellName = document.getElementById('wellName').value.trim() || 'N/D';
+        doc.text(`REPORTE DE FLOW CHECK — POZO: ${wellName}`, 14, 20);
+        
+        const tableBody = records.map((r, i) => [
+          i + 1, r.initialVolume.toFixed(2), r.finalVolume.toFixed(2), r.intervalTime.toFixed(2), r.deltaVolume.toFixed(2), r.rate.toFixed(3)
+        ]);
+        
+        doc.autoTable({
+          startY: 30,
+          head: [['#', 'Vol. Inicial', 'Vol. Final', 'Tiempo', 'Delta Vol.', 'dV/dt']],
+          body: tableBody
+        });
+
+        generatedPdfBlob = doc.output('blob');
+        generatedPdfUrl = URL.createObjectURL(generatedPdfBlob);
+        doc.save(`Flow_Check_${wellName}.pdf`);
+        
+        document.getElementById('printPdfButton').disabled = false;
+        document.getElementById('reportStatus').textContent = 'PDF generado correctamente.';
+        document.getElementById('reportStatus').className = 'report-status ready';
+      } catch (e) {
+        console.error(e);
+        alert('Error al generar el PDF.');
+      }
+    }
+
+    function printGeneratedPdf() {
+      if (!generatedPdfUrl) return;
+      const win = window.open(generatedPdfUrl, '_blank');
+      win.print();
+    }
+
+    // Inicialización de Botones de PayPal
+    function initPayPal() {
+      if (window.paypal) {
+        paypal.Buttons({
+          style: {
+            layout: 'vertical',
+            color:  'blue',
+            shape:  'rect',
+            label:  'paypal'
+          },
+          createOrder: function(data, actions) {
+            return actions.order.create({
+              purchase_units: [{
+                amount: {
+                  value: '10.00' // Monto configurable
+                },
+                description: 'Suscripción/Licencia FlowCheck Pro'
+              }]
+            });
+          },
+          onApprove: function(data, actions) {
+            return actions.order.capture().then(function(details) {
+              alert('¡Pago realizado con éxito por ' + details.payer.name.given_name + '!');
+            });
+          },
+          onError: function(err) {
+            console.error(err);
+            alert('Ocurrió un error con el pago de PayPal.');
+          }
+        }).render('#paypal-button-container');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      updateTimerDisplay();
+      updateInterface();
+      updateHeader();
+      initPayPal();
+    });
+  </script>
+</body>
+</html>
