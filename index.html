@@ -11,7 +11,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   
-  <!-- SDK de PayPal (Reemplaza YOUR_PAYPAL_CLIENT_ID con tu Client ID real) -->
+  <!-- SDK de PayPal -->
   <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
 
   <style>
@@ -338,6 +338,59 @@
       background: inherit;
     }
 
+    /* Modal de Autenticación */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .modal-close {
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .divider {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      position: relative;
+      margin: 4px 0;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: var(--border-color);
+    }
+    .divider::before { left: 0; }
+    .divider::after { right: 0; }
+
     #paypal-button-container {
       margin-top: 10px;
     }
@@ -394,11 +447,38 @@
     </div>
     <div class="user-status">
       <span id="userEmail" style="color: var(--text-muted); font-size: 0.8rem;">Sin sesión</span>
-      <button id="authBtn" class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem;" onclick="toggleAuth()">
+      <button id="authBtn" class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem;" onclick="handleAuthAction()">
         <i class="fa-solid fa-user"></i> Login
       </button>
     </div>
   </header>
+
+  <!-- Modal de Login/Registro -->
+  <div id="authModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>Iniciar Sesión / Registro</span>
+        <i class="fa-solid fa-xmark modal-close" onclick="closeAuthModal()"></i>
+      </div>
+      <div class="form-group">
+        <label>Correo Electrónico</label>
+        <input type="email" id="authEmail" class="input-ctrl" placeholder="ejemplo@correo.com">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="authPassword" class="input-ctrl" placeholder="••••••••">
+      </div>
+      <div class="button-grid">
+        <button class="btn" onclick="loginWithEmail()">Entrar</button>
+        <button class="btn btn-secondary" onclick="registerWithEmail()">Registrarse</button>
+      </div>
+      <div class="divider">O ACCEDE CON</div>
+      <button class="btn btn-secondary" onclick="loginWithGoogle()">
+        <i class="fa-brands fa-google"></i> Continuar con Google
+      </button>
+    </div>
+  </div>
+
   <main class="app-body">
     <section class="panel">
       <div class="card">
@@ -595,7 +675,7 @@
         </div>
       </div>
 
-      <!-- Sección de PayPal integrada -->
+      <!-- Sección de PayPal -->
       <div class="card">
         <div class="card-header">
           <span><i class="fa-credit-card fa-solid"></i> Licencia / Pago PayPal</span>
@@ -615,13 +695,21 @@
     </section>
   </main>
 
-  <!-- Módulos de Firebase (v10 JS Modular) -->
+  <!-- Módulos de Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+      getAuth, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Reemplaza con tus credenciales de Firebase Console
+    // Configuración de tu nuevo proyecto en Firebase
     const firebaseConfig = {
       apiKey: "TU_API_KEY",
       authDomain: "TU_PROYECTO.firebaseapp.com",
@@ -634,7 +722,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
+    const googleProvider = new GoogleAuthProvider();
 
     let currentUser = null;
 
@@ -645,32 +733,59 @@
       if (user) {
         userEmailEl.textContent = user.email;
         authBtnEl.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Salir';
+        closeAuthModal();
       } else {
         userEmailEl.textContent = 'Sin sesión';
         authBtnEl.innerHTML = '<i class="fa-solid fa-user"></i> Login';
       }
     });
 
-    window.toggleAuth = async () => {
+    window.handleAuthAction = async () => {
       if (currentUser) {
         await signOut(auth);
         alert('Sesión cerrada correctamente.');
       } else {
-        try {
-          await signInWithPopup(auth, provider);
-          alert('¡Sesión iniciada con éxito!');
-        } catch (error) {
-          console.error(error);
-          alert('Error al iniciar sesión: ' + error.message);
-        }
+        document.getElementById('authModal').style.display = 'flex';
+      }
+    };
+
+    window.closeAuthModal = () => {
+      document.getElementById('authModal').style.display = 'none';
+    };
+
+    window.loginWithGoogle = async () => {
+      try {
+        await signInWithPopup(auth, googleProvider);
+      } catch (error) {
+        alert('Error con Google: ' + error.message);
+      }
+    };
+
+    window.loginWithEmail = async () => {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if (!email || !password) return alert('Ingresa correo y contraseña.');
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        alert('Error al iniciar sesión: ' + error.message);
+      }
+    };
+
+    window.registerWithEmail = async () => {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if (!email || !password) return alert('Ingresa correo y contraseña.');
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert('Cuenta creada exitosamente.');
+      } catch (error) {
+        alert('Error al registrar usuario: ' + error.message);
       }
     };
 
     window.saveToFirebase = async () => {
-      if (!currentUser) {
-        alert('Por favor inicia sesión para guardar en la nube.');
-        return;
-      }
+      if (!currentUser) return alert('Inicia sesión para guardar tus datos.');
       const wellName = document.getElementById('wellName').value.trim() || 'Desconocido';
       try {
         await setDoc(doc(db, "flowchecks", `${currentUser.uid}_${wellName}`), {
@@ -684,18 +799,14 @@
           records: window.records,
           updatedAt: new Date().toISOString()
         });
-        alert('Datos guardados exitosamente en Firestore.');
+        alert('Guardado correctamente en Firestore.');
       } catch (e) {
-        console.error("Error guardando documento: ", e);
-        alert('Error al guardar en Firebase: ' + e.message);
+        alert('Error al guardar: ' + e.message);
       }
     };
 
     window.loadFromFirebase = async () => {
-      if (!currentUser) {
-        alert('Por favor inicia sesión para cargar datos.');
-        return;
-      }
+      if (!currentUser) return alert('Inicia sesión para cargar tus datos.');
       const wellName = document.getElementById('wellName').value.trim() || 'Desconocido';
       try {
         const docRef = doc(db, "flowchecks", `${currentUser.uid}_${wellName}`);
@@ -713,13 +824,12 @@
           window.records = data.records || [];
           window.updateInterface();
           window.updateHeader();
-          alert('Datos cargados correctamente desde Firestore.');
+          alert('Cargado correctamente desde Firestore.');
         } else {
-          alert('No se encontraron registros en la nube para este pozo.');
+          alert('No existen registros para este pozo.');
         }
       } catch (e) {
-        console.error("Error leyendo documento: ", e);
-        alert('Error al cargar de Firebase: ' + e.message);
+        alert('Error al cargar: ' + e.message);
       }
     };
   </script>
@@ -733,7 +843,6 @@
     let timerRunning = false;
     let generatedPdfBlob = null;
     let generatedPdfUrl = null;
-    let generatedPdfFileName = "";
 
     function updateHeader() {
       const wellName = document.getElementById('wellName').value.trim();
@@ -813,13 +922,7 @@
       }
       const deltaVolume = finalVolume - initialVolume;
       const rate = deltaVolume / intervalTime;
-      records.push({
-        initialVolume,
-        finalVolume,
-        intervalTime,
-        deltaVolume,
-        rate
-      });
+      records.push({ initialVolume, finalVolume, intervalTime, deltaVolume, rate });
       document.getElementById('initialVolume').value = finalVolume.toFixed(2);
       document.getElementById('finalVolume').value = '';
       updateInterface();
@@ -836,7 +939,7 @@
       
       if (!isValid) {
         inputElement.classList.add('invalid');
-        alert(isTimeField ? 'El tiempo debe ser un número mayor que cero.' : 'Capture un volumen numérico válido.');
+        alert(isTimeField ? 'El tiempo debe ser mayor que cero.' : 'Capture un volumen válido.');
         inputElement.value = record[field].toFixed(2);
         inputElement.classList.remove('invalid');
         return;
@@ -880,7 +983,7 @@
       const status = document.getElementById('statusBox');
       status.style.borderLeftColor = 'var(--primary)';
       status.style.background = 'rgba(59, 130, 246, 0.1)';
-      status.innerHTML = 'Todas las lecturas fueron eliminadas. Puede iniciar un nuevo registro.';
+      status.innerHTML = 'Todas las lecturas fueron eliminadas.';
     }
 
     function updateInterface() {
@@ -896,11 +999,7 @@
       recordCount.textContent = `${records.length} ${records.length === 1 ? 'lectura' : 'lecturas'}`;
       
       if (records.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" class="empty-row">Aún no hay lecturas registradas.</td>
-          </tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Aún no hay lecturas registradas.</td></tr>`;
         return;
       }
       tbody.innerHTML = records.map((record, index) => `
@@ -956,18 +1055,16 @@
       } else if (lastRate > 0) {
         statusBox.style.borderLeftColor = 'var(--warning)';
         statusBox.style.background = 'rgba(245, 158, 11, 0.10)';
-        statusBox.innerHTML = `<strong>Incremento de volumen.</strong><br>La última derivada es +${lastRate.toFixed(3)} bbl/min. Confirme visualmente el flujo.`;
+        statusBox.innerHTML = `<strong>Incremento de volumen.</strong><br>La última derivada es +${lastRate.toFixed(3)} bbl/min.`;
       } else {
         statusBox.style.borderLeftColor = 'var(--danger)';
         statusBox.style.background = 'rgba(239, 68, 68, 0.10)';
-        statusBox.innerHTML = `<strong>Disminución de volumen.</strong><br>La última derivada es ${lastRate.toFixed(3)} bbl/min. Revise pérdidas o transferencias.`;
+        statusBox.innerHTML = `<strong>Disminución de volumen.</strong><br>La última derivada es ${lastRate.toFixed(3)} bbl/min.`;
       }
     }
 
     function buildChartData() {
-      if (records.length === 0) {
-        return { labels: ['0.00'], volumes: [null], derivatives: [null] };
-      }
+      if (records.length === 0) return { labels: ['0.00'], volumes: [null], derivatives: [null] };
       const labels = ['0.00'];
       const volumes = [records[0].initialVolume];
       const derivatives = [null];
@@ -1002,28 +1099,8 @@
         data: {
           labels: [],
           datasets: [
-            {
-              label: 'Volumen (bbl)',
-              data: [],
-              yAxisID: 'yVolume',
-              borderColor: '#3b82f6',
-              backgroundColor: 'rgba(59, 130, 246, 0.10)',
-              tension: 0.25,
-              fill: false,
-              pointRadius: 4
-            },
-            {
-              label: 'Derivada dV/dt (bbl/min)',
-              data: [],
-              yAxisID: 'yDerivative',
-              borderColor: '#f59e0b',
-              backgroundColor: 'rgba(245, 158, 11, 0.10)',
-              borderDash: [7, 5],
-              tension: 0.15,
-              fill: false,
-              pointRadius: 4,
-              spanGaps: true
-            }
+            { label: 'Volumen (bbl)', data: [], yAxisID: 'yVolume', borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.10)', tension: 0.25, fill: false, pointRadius: 4 },
+            { label: 'Derivada dV/dt (bbl/min)', data: [], yAxisID: 'yDerivative', borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.10)', borderDash: [7, 5], tension: 0.15, fill: false, pointRadius: 4, spanGaps: true }
           ]
         },
         options: {
@@ -1062,10 +1139,7 @@
     }
 
     function generatePdfReport() {
-      if (records.length === 0) {
-        alert('Registre al menos una lectura antes de generar el PDF.');
-        return;
-      }
+      if (records.length === 0) return alert('Registre lecturas antes de generar el PDF.');
       try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -1090,7 +1164,6 @@
         document.getElementById('reportStatus').textContent = 'PDF generado correctamente.';
         document.getElementById('reportStatus').className = 'report-status ready';
       } catch (e) {
-        console.error(e);
         alert('Error al generar el PDF.');
       }
     }
@@ -1101,34 +1174,17 @@
       win.print();
     }
 
-    // Inicialización de Botones de PayPal
     function initPayPal() {
       if (window.paypal) {
         paypal.Buttons({
-          style: {
-            layout: 'vertical',
-            color:  'blue',
-            shape:  'rect',
-            label:  'paypal'
-          },
-          createOrder: function(data, actions) {
+          style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'paypal' },
+          createOrder: (data, actions) => {
             return actions.order.create({
-              purchase_units: [{
-                amount: {
-                  value: '10.00' // Monto configurable
-                },
-                description: 'Suscripción/Licencia FlowCheck Pro'
-              }]
+              purchase_units: [{ amount: { value: '10.00' }, description: 'Licencia FlowCheck Pro' }]
             });
           },
-          onApprove: function(data, actions) {
-            return actions.order.capture().then(function(details) {
-              alert('¡Pago realizado con éxito por ' + details.payer.name.given_name + '!');
-            });
-          },
-          onError: function(err) {
-            console.error(err);
-            alert('Ocurrió un error con el pago de PayPal.');
+          onApprove: (data, actions) => {
+            return actions.order.capture().then(details => alert('¡Pago realizado por ' + details.payer.name.given_name + '!'));
           }
         }).render('#paypal-button-container');
       }
